@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2
+
+- **Select Org opens instantly.** The org list is read straight from the Salesforce CLI's local files instead of running `sf org list` (which contacts every org and could take a minute). The list now marks the connected org (✓) and the project default (★), and is searchable by alias, username or URL.
+
 ## 1.1.1
 
 - User guide: new **Execute anonymous Apex** section and a step-by-step **Search inside logs** walkthrough, with screenshots of both features.

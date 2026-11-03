@@ -2,7 +2,7 @@
   "name": "orglens",
   "displayName": "OrgLens for Salesforce — Debug Logs, Performance, SOQL, REST & Org Setup",
   "description": "Live-tail and analyze Apex debug logs (performance profiler, flame chart, call tree, SOQL/DML insights), manage trace flags for any user, query and edit records inline, test REST APIs and inspect org settings — all inside VS Code.",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "anujvaishampayan",
   "author": {
     "name": "Anuj Vaishampayan"

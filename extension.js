@@ -3,7 +3,7 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { Connection, listOrgs, defaultOrg, runSf } = require('./src/sf');
+const { Connection, listOrgs, listOrgsFast, defaultOrg, runSf } = require('./src/sf');
 const { LogTreeProvider } = require('./src/logTree');
 const { showAnalyzer } = require('./src/analyzer');
 const trace = require('./src/traceFlags');
@@ -263,20 +263,26 @@ function activate(ctx) {
     const qp = vscode.window.createQuickPick();
     qp.title = 'Select Salesforce org';
     qp.placeholder = 'Loading authenticated orgs…';
+    qp.matchOnDescription = true;
+    qp.matchOnDetail = true;
     qp.busy = true;
     qp.show();
     const def = await defaultOrg(cwd());
+    const current = conn && conn.username;
     try {
-      const orgs = await listOrgs(cwd());
+      // Fast path: read the CLI's auth files directly (instant). `sf org list` pings every org and takes 10–60 s.
+      let orgs = listOrgsFast();
+      if (!orgs.length) orgs = await listOrgs(cwd());
+      const isDef = (o) => o.alias === def || o.username === def || (o.aliases || []).includes(def);
       qp.items = orgs
-        .sort((a, b) => (b.lastUsed || '').localeCompare(a.lastUsed || ''))
+        .sort((a, b) => (b.username === current) - (a.username === current) || isDef(b) - isDef(a) || (b.lastUsed || '').localeCompare(a.lastUsed || ''))
         .map((o) => ({
-          label: `${o.alias === def || o.username === def ? '$(star-full) ' : ''}${o.alias || o.username}`,
-          description: o.username,
-          detail: `${o.instanceUrl}${o.connectedStatus && o.connectedStatus !== 'Connected' ? '  ·  ⚠ ' + o.connectedStatus : ''}${o.isSandbox ? '  ·  sandbox' : o.isScratch ? '  ·  scratch' : ''}`,
+          label: `${o.username === current ? '$(check) ' : isDef(o) ? '$(star-full) ' : ''}${o.alias || o.username}`,
+          description: [o.username, ...(o.aliases || []).slice(1)].join(' · '),
+          detail: `${o.instanceUrl.replace(/^https:\/\//, '')}${o.isSandbox ? '  ·  sandbox' : o.isScratch ? '  ·  scratch' : ''}${o.isDevHub ? '  ·  Dev Hub' : ''}${o.username === current ? '  ·  connected' : isDef(o) ? '  ·  project default' : ''}`,
           target: o.alias || o.username,
         }));
-      qp.placeholder = 'Pick an org (★ = project default)';
+      qp.placeholder = `Pick an org — ${orgs.length} authorized (✓ connected · ★ project default) — type to filter`;
     } catch (e) {
       qp.items = [{ label: '$(error) ' + e.message }];
     }

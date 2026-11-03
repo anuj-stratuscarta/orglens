@@ -233,6 +233,41 @@ class Connection {
   }
 }
 
+/**
+ * Authorized orgs read straight from the sf CLI's files (~/.sfdx/<username>.json + alias.json) — instant,
+ * no process spawn and no network. Tokens are not read (they're encrypted anyway).
+ */
+function listOrgsFast() {
+  const dir = path.join(os.homedir(), '.sfdx');
+  let aliases = {};
+  try { aliases = JSON.parse(fs.readFileSync(path.join(dir, 'alias.json'), 'utf8')).orgs || {}; } catch { /* none */ }
+  const byUser = {};
+  for (const [alias, user] of Object.entries(aliases)) (byUser[user] = byUser[user] || []).push(alias);
+  const out = [];
+  let files = [];
+  try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.json') && f.includes('@')); } catch { return out; }
+  for (const f of files) {
+    try {
+      const full = path.join(dir, f);
+      const j = JSON.parse(fs.readFileSync(full, 'utf8'));
+      if (!j.username || !j.instanceUrl) continue;
+      out.push({
+        username: j.username,
+        alias: (byUser[j.username] || [])[0] || null,
+        aliases: byUser[j.username] || [],
+        instanceUrl: j.instanceUrl,
+        orgId: j.orgId,
+        isSandbox: !!j.isSandbox,
+        isScratch: !!j.isScratch,
+        isDevHub: !!j.isDevHub,
+        expires: j.expirationDate || null,
+        lastUsed: fs.statSync(full).mtime.toISOString(),
+      });
+    } catch { /* skip unreadable file */ }
+  }
+  return out;
+}
+
 async function listOrgs(cwd) {
   const r = await runSf(['org', 'list'], cwd);
   const seen = new Map();
@@ -285,4 +320,4 @@ async function defaultOrg(cwd) {
   }
 }
 
-module.exports = { runSf, Connection, listOrgs, defaultOrg };
+module.exports = { runSf, Connection, listOrgs, listOrgsFast, defaultOrg };
