@@ -14,6 +14,7 @@ function showAnalyzer(ctx, o) {
   const existing = panels.get(o.key);
   if (existing) {
     existing.reveal(vscode.ViewColumn.Active);
+    if (o.search) existing.webview.postMessage({ type: 'search', term: o.search, line: o.line });
     return existing;
   }
   const media = vscode.Uri.joinPath(ctx.extensionUri, 'media');
@@ -37,6 +38,7 @@ function showAnalyzer(ctx, o) {
   }
   data.meta = { title: o.title, size: o.text.length, file: o.uri.fsPath, ...(o.meta || {}) };
   data.raw = o.text;
+  if (o.search) data.meta.search = { term: o.search, line: o.line };
 
   const w = panel.webview;
   const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);

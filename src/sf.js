@@ -156,6 +156,46 @@ class Connection {
     }
   }
 
+  /**
+   * Execute anonymous Apex through the Apex SOAP API with a DebuggingHeader, so the response carries
+   * the structured result (compile error line/column, exception, stack) AND the debug log — even on failure.
+   */
+  async executeAnonymous(code, levels) {
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const lv = levels || { Apex_code: 'FINE', Apex_profiling: 'FINEST', Callout: 'INFO', Db: 'FINEST', System: 'INFO', Validation: 'INFO', Visualforce: 'INFO', Workflow: 'FINER' };
+    const cats = Object.entries(lv).map(([c, l]) => `<apex:categories><apex:category>${c}</apex:category><apex:level>${l}</apex:level></apex:categories>`).join('');
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const envelope =
+        '<?xml version="1.0" encoding="utf-8"?><env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:apex="http://soap.sforce.com/2006/08/apex">' +
+        `<env:Header><apex:SessionHeader><apex:sessionId>${this.accessToken}</apex:sessionId></apex:SessionHeader><apex:DebuggingHeader>${cats}<apex:debugLevel>NONE</apex:debugLevel></apex:DebuggingHeader></env:Header>` +
+        `<env:Body><apex:executeAnonymous><apex:String>${esc(code)}</apex:String></apex:executeAnonymous></env:Body></env:Envelope>`;
+      const res = await fetch(`${this.instanceUrl}/services/Soap/s/${this.apiVersion}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml; charset=UTF-8', SOAPAction: '""' },
+        body: envelope,
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        if (attempt === 0 && /INVALID_SESSION_ID/.test(text)) { this.accessToken = await this.freshToken(null); continue; }
+        throw new Error((/<faultstring>([\s\S]*?)<\/faultstring>/.exec(text) || [])[1] || `HTTP ${res.status}`);
+      }
+      const X = require('./xml');
+      const doc = X.parse(text);
+      const field = (n) => { const f = X.find(X.find(doc, 'result') || doc, n); return f ? f.text : null; };
+      const log = X.find(doc, 'debugLog');
+      return {
+        compiled: field('compiled') === 'true',
+        success: field('success') === 'true',
+        line: Number(field('line')) || null,
+        column: Number(field('column')) || null,
+        compileProblem: field('compileProblem') || '',
+        exceptionMessage: field('exceptionMessage') || '',
+        exceptionStackTrace: field('exceptionStackTrace') || '',
+        logs: log ? log.text : '',
+      };
+    }
+  }
+
   // ---- Apex logs -------------------------------------------------------
   listLogs({ max = 100, userId, errorsOnly } = {}) {
     const where = [];

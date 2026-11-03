@@ -217,7 +217,7 @@
         <li><b>Activity-bar icon:</b> opens this Studio on Home (setting <code>orglens.openHomeOnSidebarClick</code>) and shows the compact <i>Debug Logs</i> list with the same actions on its toolbar.</li>
         <li><b>Status bar:</b> <code>☁ org</code> switches org; the trace item shows time left and opens a quick menu.</li>
         <li><b>Raw logs</b> open with syntax colouring, an Outline (code units → methods) and folding.</li>
-        <li><b>Execute anonymous:</b> select Apex in an editor and press ${k('Ctrl')}+${k('Alt')}+${k('E')}, or use the Home tile.</li>
+        <li><b>Execute anonymous:</b> the Home tile (or <i>OrgLens: Execute Anonymous Apex</i>) opens a dialog — paste Apex, <i>Load file…</i> (.apex/.cls/.txt) or pick a <i>Recent snippet</i>, and press Run (${k('Ctrl')}+${k('Enter')}). You see success, the compile error with its line selected in the code, or the runtime exception with stack trace, and the debug log opens in the analyzer automatically (captured at Analysis level, even when the code fails). In an Apex editor, select code and press ${k('Ctrl')}+${k('Alt')}+${k('E')} to run it directly.</li>
         <li><b>Any .log file:</b> right-click in the Explorer → <i>Analyze Apex Log File</i>.</li>
         <li><b>Commands:</b> every feature is in the Command Palette under <i>OrgLens:</i> — e.g. <i>Open OrgLens</i>, <i>Open SOQL Explorer</i>, <i>Open REST Explorer</i>, <i>Manage Trace Flags</i>, <i>Open User Guide</i>.</li>
       </ul>`],

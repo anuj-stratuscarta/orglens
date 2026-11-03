@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+- **Search inside logs** now works in the Live Logs list: type text or a /regex/ and the list narrows to the logs that contain it, with match counts and the matching lines. Click a line to open the log in the Log Viewer with the search applied and that line selected.
+- **Execute anonymous** opens a dialog: paste Apex, load a file or reuse a recent snippet, then Run. Shows success, compile errors (with the line highlighted) or runtime exceptions with stack trace, and opens the debug log automatically, even when the code fails.
+- Anonymous Apex now runs through the Apex API directly: about 10× faster than before, with method-level timing in the log.
+
 ## 1.0.0 — first public release
 
 OrgLens is the new name for the extension previously developed as "SF Log Studio".

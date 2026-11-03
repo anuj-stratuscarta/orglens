@@ -68,8 +68,8 @@
     'SOQL explorer': 'Salesforce Inspector-style query tool: object & field browser, autocomplete, Ctrl+Enter to run, results grid with record view, CSV/JSON export, history and saved queries.',
     'Org setup': 'See which Setup settings are enabled or disabled (searchable across all settings pages), org limits, installed packages, licenses, your permission sets and the setup audit trail.',
     'Filter logs': 'Jump to Live Logs with the search box focused. Combine text search with status, user, operation, time-range and minimum-duration filters.',
-    'Search inside logs': 'Full-text (or /regex/) search through the contents of the listed logs — e.g. an exception message or record Id — then jump straight to the matching line.',
-    'Execute anonymous': 'Run Apex (selected code, a .apex file, or typed in) against the org and open its debug log in the analyzer immediately. Shortcut: Ctrl+Alt+E in an Apex editor.',
+    'Search inside logs': 'Find logs that contain a word, record Id, exception or /regex/. Opens Live Logs with the search box ready; matching logs show their match count and lines — click a line to open it in the analyzer.',
+    'Execute anonymous': 'Opens a dialog: paste Apex or load a .apex file, press Run (Ctrl+Enter), and see success or the error — the debug log opens in the analyzer automatically. In an Apex editor, select code and press Ctrl+Alt+E to run it directly.',
     'Analyze local file': 'Open any Apex debug log saved on disk (e.g. downloaded from Setup or shared by a colleague) in the analyzer.',
     'REST explorer': 'Postman/Workbench-style tester for any Salesforce REST endpoint: choose method and path, add headers and a JSON body, send with Ctrl+Enter, and read the response as a collapsible JSON tree, raw text or headers. History, saved requests and copy-as-cURL included.',
     'Delete logs': 'Bulk-delete debug logs from the org: just yours, the ones currently shown, or all logs. Asks for confirmation first.',
@@ -148,7 +148,14 @@
   const run = (id, args) => post({ cmd: 'run', id, args });
 
   function setTab(t) {
-    if (!document.getElementById('p-' + t)) t = 'home';
+    // "tab:action" — e.g. "logs:search" focuses search inside logs, ":anon" opens the run-Apex dialog on the current tab
+    let action = null;
+    if (t && String(t).includes(':')) [t, action] = String(t).split(':');
+    if (!t || !document.getElementById('p-' + t)) t = st.tab && document.getElementById('p-' + st.tab) ? st.tab : 'home';
+    if (action) setTimeout(() => {
+      if (action === 'search') { const b = $('#bq'); if (b) { b.focus(); b.select(); } }
+      if (action === 'anon' && S && S.org) openAnon();
+    }, 60);
     st.tab = t;
     save();
     document.querySelectorAll('.s-tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === t));
@@ -201,6 +208,12 @@
           <label class="muted" style="display:flex;gap:5px;align-items:center;font-size:12px"><input type="checkbox" id="fmine">Only mine</label>
           <button class="btn sm" id="fclear">Clear</button>
         </div>
+        <div class="lt-body" id="ltBody">
+          ${I.search}<input class="search" id="bq" placeholder="Search inside logs — text or /regex/, e.g. NullPointerException, 001d5000…, /Account.*Id/" spellcheck="false">
+          <button class="btn sm primary" id="bqGo">Search inside logs</button>
+          <button class="btn sm" id="bqClear" hidden>Clear</button>
+          <span class="muted small" id="bqStat">Searches the contents of the logs listed below (current filters apply).</span>
+        </div>
         <div class="lt-sub">
           <span id="ltCount"></span>
           <span class="sel-acts" id="selActs"><b id="selN"></b> selected
@@ -237,7 +250,10 @@
       if (S.filter.mineOnly) post({ cmd: 'serverFilter', filter: { mineOnly: false } });
       drawTable();
     };
-    $('#selOpen').onclick = () => [...checked].slice(0, 5).forEach((id) => post({ cmd: 'open', id, mode: 'analyze' }));
+    $('#bqGo').onclick = runBodySearch;
+    $('#bq').addEventListener('keydown', (e) => { if (e.key === 'Enter') runBodySearch(); if (e.key === 'Escape') clearBodySearch(); });
+    $('#bqClear').onclick = clearBodySearch;
+    $('#selOpen').onclick = () => [...checked].slice(0, 5).forEach((id) => post({ cmd: 'open', id, mode: 'analyze', search: BS.term || undefined }));
     $('#selDel').onclick = () => post({ cmd: 'delete', ids: [...checked] });
     $('#selNone').onclick = () => { checked.clear(); drawTable(); };
     document.addEventListener('keydown', (e) => {
@@ -325,8 +341,8 @@
         ${A(I.ext, '#2bb5c4', 'REST explorer', 'Test REST APIs, JSON body, pretty & raw response', 'data-tab="rest"')}
         ${A(I.gear, '#6e7781', 'Org setup', 'Settings on/off, limits, packages, licenses, audit trail', 'data-tab="org"')}
         ${A(I.filter, '#d16ba5', 'Filter logs', 'Status, user, operation, duration', 'data-tab="logs" data-focus="1"')}
-        ${A(I.search, '#e3a73b', 'Search inside logs', 'Text or /regex/ across log bodies', 'data-run="orglens.searchLogs"')}
-        ${A(I.play, '#3fb27f', 'Execute anonymous', 'Run Apex and analyze its log', 'data-run="orglens.executeAnonymous"')}
+        ${A(I.search, '#e3a73b', 'Search inside logs', 'Text or /regex/ across log bodies', 'data-go="logs:search"')}
+        ${A(I.play, '#3fb27f', 'Execute anonymous', 'Paste code or pick a file, run it, see the log', 'data-anon')}
         ${A(I.file, '#6e7781', 'Analyze local file', 'Open any .log from disk', 'data-run="orglens.analyzeFile"')}
         ${A(I.trash, '#f85149', 'Delete logs', 'Mine, shown, or all', 'data-run="orglens.deleteAll"')}
       </div></div>
@@ -355,7 +371,7 @@
         ${S.tracing
           ? step(1, 'Do something in the org', 'Tracing is on, so open a record, save a quote or run a flow and its log will appear here. Live tail streams new logs as they arrive.', `<button class="btn sm" data-live>${I.live} ${S.tailing ? 'Live tail is on' : 'Start live tail'}</button>`)
           : step(1, 'Start tracing', 'Capture everything you do in the org for the next 30 minutes, then turn on live tail.', `<button class="btn sm primary" data-run="orglens.startTrace">${I.record} Start tracing</button>`)}
-        ${step(2, 'Run anonymous Apex', 'Execute a snippet and open its log in the analyzer straight away.', `<button class="btn sm" data-run="orglens.executeAnonymous">${I.play} Execute anonymous</button>`)}
+        ${step(2, 'Run anonymous Apex', 'Execute a snippet and open its log in the analyzer straight away.', `<button class="btn sm" data-anon>${I.play} Execute anonymous</button>`)}
         ${step(3, 'Analyze a saved log', 'Open any .log file from disk — no org needed.', `<button class="btn sm" data-run="orglens.analyzeFile">${I.file} Open .log file</button>`)}
       </div></div>`;
   }
@@ -465,6 +481,9 @@
     return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
   function homeClick(e) {
+    if (e.target.closest('[data-anon]')) return openAnon();
+    const g = e.target.closest('[data-go]');
+    if (g) return setTab(g.dataset.go);
     const r = e.target.closest('[data-run]');
     if (r) return run(r.dataset.run);
     if (e.target.closest('[data-live]')) return toggleLive();
@@ -513,6 +532,7 @@
     const wrap = $('#ltWrap');
     if (!S.org) { wrap.innerHTML = S.connecting ? `<div class="empty"><span class="spinner sm"></span> Connecting to ${esc(S.connecting)}…</div>` : '<div class="empty">Select an org to see its logs.</div>'; return; }
     let rows = filtered();
+    if (BS.term) rows = rows.filter((l) => { const r = BS.results.get(l.id); return r && r.count > 0; });
     const { k, dir } = st.sort;
     rows.sort((a, b) => {
       const A = k === 'start' ? a.start : a[k], B = k === 'start' ? b.start : b[k];
@@ -521,6 +541,7 @@
     for (const id of [...checked]) if (!S.logs.some((l) => l.id === id)) checked.delete(id);
     const maxDur = Math.max(1, ...rows.map((r) => r.dur));
     $('#ltCount').textContent = `${rows.length} of ${S.logs.length} logs${S.error ? ' · ⚠ ' + S.error : ''}`;
+    drawBodyStat();
     $('#selActs').classList.toggle('show', checked.size > 0);
     $('#selN').textContent = checked.size;
     const isNew = new Set(S.newIds);
@@ -532,17 +553,17 @@
         <td><input type="checkbox" class="chk" ${checked.has(l.id) ? 'checked' : ''}></td>
         <td><span class="st ${bad ? 'bad' : ''}" title="${esc(l.status)}"><span class="sd ${bad ? 'bad' : ''}"></span></span></td>
         <td title="${esc(new Date(l.start).toLocaleString())}">${when(l.start)}</td>
-        <td class="op" title="${esc(l.op)}">${isNew.has(l.id) ? '<span class="newtag">NEW</span>' : ''}${esc(l.op)}${bad ? ` <span class="badge err">${esc(l.status.length > 40 ? l.status.slice(0, 40) + '…' : l.status)}</span>` : ''}</td>
+        <td class="op" title="${esc(l.op)}">${isNew.has(l.id) ? '<span class="newtag">NEW</span>' : ''}${esc(l.op)}${bad ? ` <span class="badge err">${esc(l.status.length > 40 ? l.status.slice(0, 40) + '…' : l.status)}</span>` : ''}${BS.term && BS.results.get(l.id) ? ` <span class="badge mt">${BS.results.get(l.id).count} match${BS.results.get(l.id).count === 1 ? '' : 'es'}</span>` : ''}</td>
         <td>${esc(l.user)}</td>
         <td class="dur"><div class="durbar"><span>${dur(l.dur)}</span><div class="b"><i class="${l.dur > 5000 ? 'slow' : ''}" style="width:${(l.dur / maxDur) * 100}%"></i></div></div></td>
         <td class="num">${size(l.size)}</td>
         <td class="muted">${esc(l.request)} · ${esc(l.location)}</td>
-        <td><div class="rowacts"><button data-a="analyze" title="Analyze">${I.graph}</button><button data-a="raw" title="Open raw log">${I.raw}</button><button data-a="del" title="Delete">${I.trash}</button></div></td></tr>`;
+        <td><div class="rowacts"><button data-a="analyze" title="Analyze">${I.graph}</button><button data-a="raw" title="Open raw log">${I.raw}</button><button data-a="del" title="Delete">${I.trash}</button></div></td></tr>${snippetRow(l)}`;
     }).join('');
     rows.forEach((l) => isNew.has(l.id) && seenRows.add(l.id));
     wrap.innerHTML = rows.length
       ? `<table class="lt"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`
-      : `<div class="empty">${S.logs.length ? 'No logs match these filters.' : S.tracing ? 'Waiting for logs… run something in the org.' : 'No logs yet. Start tracing, then run something in the org.'}</div>`;
+      : `<div class="empty">${BS.term ? (BS.running ? 'Searching inside logs…' : `No listed log contains <b>${esc(BS.term)}</b>.`) : S.logs.length ? 'No logs match these filters.' : S.tracing ? 'Waiting for logs… run something in the org.' : 'No logs yet. Start tracing, then run something in the org.'}</div>`;
     const all = $('#chkAll');
     if (all) {
       all.checked = rows.length > 0 && rows.every((r) => checked.has(r.id));
@@ -558,19 +579,157 @@
     };
     const tb = wrap.querySelector('tbody');
     if (tb) tb.onclick = (e) => {
+      const sn = e.target.closest('[data-line]');
+      if (sn) return post({ cmd: 'open', id: sn.dataset.log, mode: e.ctrlKey || e.metaKey ? 'raw' : 'analyze', search: BS.term, line: +sn.dataset.line });
       const tr = e.target.closest('tr');
-      if (!tr) return;
+      if (!tr || !tr.dataset.id) return;
       const id = tr.dataset.id;
       if (e.target.classList.contains('chk')) { e.target.checked ? checked.add(id) : checked.delete(id); drawTable(); return; }
       const a = e.target.closest('[data-a]');
       if (a) {
         if (a.dataset.a === 'del') post({ cmd: 'delete', ids: [id] });
-        else post({ cmd: 'open', id, mode: a.dataset.a });
+        else post({ cmd: 'open', id, mode: a.dataset.a, search: BS.term || undefined });
         return;
       }
       if (e.shiftKey) { checked.has(id) ? checked.delete(id) : checked.add(id); drawTable(); return; }
-      post({ cmd: 'open', id, mode: e.ctrlKey || e.metaKey ? 'raw' : 'analyze' });
+      post({ cmd: 'open', id, mode: e.ctrlKey || e.metaKey ? 'raw' : 'analyze', search: BS.term || undefined });
     };
+  }
+
+  // ---------- search inside logs ----------
+  let BS = { term: '', results: new Map(), running: false, done: 0, total: 0, token: 0, matches: 0 };
+  const hlTerm = (text) => {
+    const m = /^\/(.+)\/(\w*)$/.exec(BS.term);
+    let re;
+    try { re = m ? new RegExp(m[1], (m[2].includes('i') ? m[2] : m[2] + 'i').replace('g', '') + 'g') : new RegExp(BS.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'); } catch { return esc(text); }
+    let out = '', last = 0, x;
+    while ((x = re.exec(text)) && x[0].length) { out += esc(text.slice(last, x.index)) + '<mark>' + esc(x[0]) + '</mark>'; last = x.index + x[0].length; }
+    return out + esc(text.slice(last));
+  };
+  function snippetRow(l) {
+    const r = BS.term && BS.results.get(l.id);
+    if (!r || !r.lines.length) return '';
+    return `<tr class="snip"><td></td><td colspan="8">${r.lines.map((h) => `<div class="snip-l" data-log="${l.id}" data-line="${h.i}" title="Open this line in the analyzer (Ctrl+click: raw log)"><span class="snip-n">L${h.i + 1}</span>${hlTerm(h.text)}</div>`).join('')}${r.count > r.lines.length ? `<div class="snip-more muted small">+ ${r.count - r.lines.length} more — open the log to see all</div>` : ''}</td></tr>`;
+  }
+  function drawBodyStat() {
+    const stat = $('#bqStat');
+    if (!stat) return;
+    $('#bqClear').hidden = !BS.term;
+    $('#ltBody').classList.toggle('active', !!BS.term);
+    if (!BS.term) { stat.textContent = 'Searches the contents of the logs listed below (current filters apply).'; return; }
+    const found = [...BS.results.values()].filter((r) => r.count > 0).length;
+    stat.innerHTML = BS.running
+      ? `<span class="spinner sm"></span> Searching inside logs… ${BS.done}/${BS.total} · ${found} match so far`
+      : `<b>${found}</b> of ${BS.total} log${BS.total === 1 ? '' : 's'} contain <b>${esc(BS.term)}</b> (${BS.matches.toLocaleString()} line${BS.matches === 1 ? '' : 's'}) · click a line to open it`;
+  }
+  async function runBodySearch() {
+    const term = $('#bq').value.trim();
+    if (!term) return clearBodySearch();
+    const rx = /^\/(.+)\/(\w*)$/.exec(term);
+    if (rx) { try { new RegExp(rx[1], rx[2]); } catch (e) { return toast('Invalid regex: ' + e.message, 'error'); } }
+    // search the logs the list currently shows (filters applied), newest first
+    const ids = filtered().sort((a, b) => (a.start < b.start ? 1 : -1)).map((l) => l.id);
+    if (!ids.length) return toast('No logs in the list to search — clear the filters or refresh.', 'error');
+    const token = BS.token + 1;
+    BS = { term, results: new Map(), running: true, done: 0, total: ids.length, token, matches: 0 };
+    drawTable();
+    for (let i = 0; i < ids.length; i += 6) {
+      let res;
+      try { res = await call('searchLogBodies', { term, ids: ids.slice(i, i + 6) }); } catch (e) { toast(e.message, 'error'); break; }
+      if (BS.token !== token) return; // a newer search started
+      res.forEach((r) => { BS.results.set(r.id, r); BS.matches += r.count; });
+      BS.done = Math.min(ids.length, i + 6);
+      drawTable();
+    }
+    if (BS.token !== token) return;
+    BS.running = false;
+    drawTable();
+  }
+  function clearBodySearch() {
+    BS = { term: '', results: new Map(), running: false, done: 0, total: 0, token: BS.token + 1, matches: 0 };
+    const b = $('#bq');
+    if (b) b.value = '';
+    drawTable();
+  }
+
+  // ---------- execute anonymous dialog ----------
+  async function openAnon() {
+    if (document.querySelector('.anon-modal')) return;
+    const org = (S && S.org && S.org.alias) || 'the org';
+    let draft = '';
+    try { draft = localStorage.getItem('orglens.anonDraft') || ''; } catch { /* no storage */ }
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal wide anon-modal">
+      <h3>${I.play} Execute anonymous Apex <span class="muted small">· runs as you in <b>${esc(org)}</b></span></h3>
+      <div class="anon-bar">
+        <button class="btn sm" data-a="file">${I.file} Load file…</button>
+        <select id="axHist"><option value="">Recent snippets…</option></select>
+        <button class="btn sm" data-a="clear">Clear</button>
+        <span style="flex:1"></span>
+        <span class="muted small">${'<span class="kbd">Ctrl</span>+<span class="kbd">Enter</span>'} to run · the log opens in the analyzer</span>
+      </div>
+      <textarea id="axCode" spellcheck="false" placeholder="// Paste Apex here, e.g.\nList<Account> accts = [SELECT Id, Name FROM Account LIMIT 5];\nSystem.debug(accts);">${esc(draft)}</textarea>
+      <div class="anon-res" id="axRes"></div>
+      <div class="modal-acts"><button class="btn" data-a="close">Close</button><button class="btn primary" data-a="run">${I.play} Run</button></div>
+    </div>`;
+    document.body.appendChild(bg);
+    const code = bg.querySelector('#axCode');
+    const res = bg.querySelector('#axRes');
+    const runBtn = bg.querySelector('[data-a="run"]');
+    code.focus();
+    const saveDraft = () => { try { localStorage.setItem('orglens.anonDraft', code.value); } catch { /* ignore */ } };
+    code.addEventListener('input', saveDraft);
+    code.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') { e.preventDefault(); code.setRangeText('    ', code.selectionStart, code.selectionEnd, 'end'); saveDraft(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); }
+    });
+    const close = () => { bg.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape' && !runBtn.disabled) close(); };
+    document.addEventListener('keydown', onKey);
+    let hist = [];
+    call('anonHistory').then((h) => {
+      hist = h || [];
+      bg.querySelector('#axHist').innerHTML = '<option value="">Recent snippets…</option>' + hist.map((x, i) => `<option value="${i}">${x.ok ? '✓' : '✗'} ${esc(x.code.replace(/\s+/g, ' ').slice(0, 70))}${x.org ? ' · ' + esc(x.org) : ''}</option>`).join('');
+    }).catch(() => {});
+    bg.querySelector('#axHist').onchange = (e) => { const x = hist[+e.target.value]; if (x) { code.value = x.code; saveDraft(); } e.target.value = ''; code.focus(); };
+    async function run() {
+      if (!code.value.trim()) { res.innerHTML = '<div class="anon-err">Paste some Apex to run.</div>'; return; }
+      runBtn.disabled = true;
+      runBtn.innerHTML = '<span class="spinner sm"></span> Running…';
+      res.innerHTML = `<div class="muted"><span class="spinner sm"></span> Executing in ${esc(org)}…</div>`;
+      try {
+        const r = await call('execAnon', { code: code.value });
+        if (!r.compiled) {
+          res.innerHTML = `<div class="anon-err"><b>Compile error</b> at line ${r.line}, column ${r.column}<pre>${esc(r.compileProblem || '')}</pre></div>`;
+          const lines = code.value.split('\n');
+          const ln = Math.max(1, Math.min(lines.length, r.line || 1));
+          const start = lines.slice(0, ln - 1).join('\n').length + (ln > 1 ? 1 : 0);
+          code.focus();
+          code.setSelectionRange(start, start + lines[ln - 1].length);
+        } else if (!r.success) {
+          res.innerHTML = `<div class="anon-err"><b>Runtime exception</b> · ${r.ms} ms<pre>${esc(r.exceptionMessage || '')}${r.exceptionStackTrace ? '\n' + esc(r.exceptionStackTrace) : ''}</pre>${r.logSize ? '<div class="muted small">The debug log opened in the analyzer — check Debug &amp; Errors.</div>' : ''}</div>`;
+        } else {
+          res.innerHTML = `<div class="anon-ok"><b>✓ Executed successfully</b> · ${r.ms} ms${r.logSize ? ` · log (${(r.logSize / 1024).toFixed(1)} KB) opened in the analyzer` : ' · no log returned'}</div>`;
+        }
+      } catch (e) {
+        res.innerHTML = `<div class="anon-err"><b>Could not run</b><pre>${esc(e.message)}</pre></div>`;
+      }
+      runBtn.disabled = false;
+      runBtn.innerHTML = `${I.play} Run again`;
+    }
+    bg.addEventListener('click', async (e) => {
+      if (e.target === bg) return close();
+      const a = e.target.closest('[data-a]');
+      if (!a) return;
+      if (a.dataset.a === 'close') return close();
+      if (a.dataset.a === 'run') return run();
+      if (a.dataset.a === 'clear') { code.value = ''; saveDraft(); res.innerHTML = ''; code.focus(); }
+      if (a.dataset.a === 'file') {
+        const f = await call('readApexFile').catch((err) => { toast(err.message, 'error'); return null; });
+        if (f) { code.value = f.code; saveDraft(); res.innerHTML = `<div class="muted small">Loaded ${esc(f.name)} — press Run.</div>`; code.focus(); }
+      }
+    });
   }
 
   // keep relative times fresh

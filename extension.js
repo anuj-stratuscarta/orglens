@@ -202,7 +202,8 @@ function activate(ctx) {
     return file;
   }
 
-  async function openLog(log, mode) {
+  /** opts.search / opts.line: open the analyzer's Log Viewer searching for a term (or the raw log at a line). */
+  async function openLog(log, mode, opts = {}) {
     try {
       provider.markSeen(log.Id);
       view.badge = provider.newIds.size ? { value: provider.newIds.size, tooltip: 'new logs' } : undefined;
@@ -211,7 +212,12 @@ function activate(ctx) {
       if (mode === 'raw') {
         const doc = await vscode.workspace.openTextDocument(uri);
         await vscode.languages.setTextDocumentLanguage(doc, 'apexlog');
-        await vscode.window.showTextDocument(doc, { preview: true });
+        const ed = await vscode.window.showTextDocument(doc, { preview: true });
+        if (opts.line != null) {
+          const pos = new vscode.Position(Math.min(opts.line, doc.lineCount - 1), 0);
+          ed.selection = new vscode.Selection(pos, doc.lineAt(pos.line).range.end);
+          ed.revealRange(ed.selection, vscode.TextEditorRevealType.InCenter);
+        }
         return;
       }
       const text = fs.readFileSync(file, 'utf8');
@@ -221,6 +227,8 @@ function activate(ctx) {
         text,
         uri,
         getConn: () => conn,
+        search: opts.search,
+        line: opts.line,
         meta: {
           id: log.Id,
           operation: log.Operation,
@@ -450,79 +458,79 @@ function activate(ctx) {
     analyzeText(doc.getText(), target, path.basename(target.fsPath || target.path));
   });
 
-  reg('orglens.searchLogs', async () => {
-    if (!needConn()) return;
-    const term = await vscode.window.showInputBox({ title: 'Search across logs', prompt: 'Text or /regex/ — searches the logs currently listed', placeHolder: 'e.g. NullPointerException or /Account.*Id/' });
-    if (!term) return;
-    let re;
+  // ---------- search inside log bodies (used by the Live Logs page) ----------
+  function bodyRegex(term) {
     const m = /^\/(.+)\/(\w*)$/.exec(term);
-    try {
-      re = m ? new RegExp(m[1], m[2] || 'i') : new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    } catch (e) {
-      return vscode.window.showErrorMessage('Bad regex: ' + e.message);
-    }
-    const logs = provider.filtered().slice(0, cfg().get('search.maxLogs'));
-    const hits = [];
-    await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Searching logs', cancellable: true }, async (prog, tok) => {
-      let done = 0;
-      const queue = [...logs];
-      const worker = async () => {
-        while (queue.length && !tok.isCancellationRequested && hits.length < 1000) {
-          const log = queue.shift();
-          try {
-            const file = path.join(cacheDir(), `${log.Id}.log`);
-            if (!fs.existsSync(file)) fs.writeFileSync(file, await conn.getLogBody(log.Id));
-            const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
-            lines.forEach((t, i) => re.test(t) && hits.push({ log, i, t }));
-          } catch { /* skip */ }
-          prog.report({ increment: 100 / logs.length, message: `${++done}/${logs.length} · ${hits.length} hits` });
+    return m ? new RegExp(m[1], m[2].includes('i') ? m[2] : m[2] + 'i') : new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  }
+  async function searchLogBodies(term, idList) {
+    const re = bodyRegex(term);
+    return Promise.all(
+      idList.map(async (id) => {
+        try {
+          const file = path.join(cacheDir(), `${id}.log`);
+          if (!fs.existsSync(file)) fs.writeFileSync(file, await conn.getLogBody(id));
+          const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+          const hits = [];
+          let count = 0;
+          lines.forEach((t, i) => {
+            re.lastIndex = 0;
+            if (re.test(t)) {
+              count++;
+              if (hits.length < 3) hits.push({ i, text: t.replace(/^\d{1,2}:\d{2}:\d{2}\.\d+ \(\d+\)\|/, '').slice(0, 240) });
+            }
+          });
+          return { id, count, lines: hits };
+        } catch (e) {
+          return { id, count: 0, lines: [], error: e.message };
         }
-      };
-      await Promise.all(Array.from({ length: 6 }, worker));
-    });
-    if (!hits.length) return vscode.window.showInformationMessage(`No matches for ${term} in ${logs.length} logs.`);
-    const p = await vscode.window.showQuickPick(
-      hits.slice(0, 1000).map((h) => ({
-        label: h.t.replace(/^\d{2}:\d{2}:\d{2}\.\d+ \(\d+\)\|/, '').slice(0, 200),
-        description: `${h.log.Operation} · ${new Date(h.log.StartTime).toLocaleTimeString()}`,
-        detail: `line ${h.i + 1} · ${h.log.LogUser && h.log.LogUser.Name}`,
-        h,
-      })),
-      { title: `${hits.length} matches in ${new Set(hits.map((h) => h.log.Id)).size} logs`, matchOnDescription: true, matchOnDetail: true }
+      })
     );
-    if (!p) return;
-    const doc = await vscode.workspace.openTextDocument(path.join(cacheDir(), `${p.h.log.Id}.log`));
-    await vscode.languages.setTextDocumentLanguage(doc, 'apexlog');
-    const ed = await vscode.window.showTextDocument(doc);
-    const pos = new vscode.Position(p.h.i, 0);
-    ed.selection = new vscode.Selection(pos, doc.lineAt(p.h.i).range.end);
-    ed.revealRange(ed.selection, vscode.TextEditorRevealType.InCenter);
+  }
+  reg('orglens.searchLogs', () => {
+    if (!needConn()) return;
+    openStudio(ctx, studioApi, 'logs:search');
   });
 
+  // ---------- execute anonymous Apex ----------
+  /**
+   * Runs Apex through the Apex SOAP API (structured result + debug log even when it fails — `sf apex run`
+   * drops both on errors), opens the log in the analyzer and returns the result.
+   */
+  async function runAnonymous(code) {
+    const t0 = Date.now();
+    {
+      const r = await conn.executeAnonymous(code);
+      let logFile = null;
+      if (r.logs) {
+        logFile = path.join(cacheDir(), `anon-${Date.now()}.log`);
+        fs.writeFileSync(logFile, r.logs);
+        analyzeText(r.logs, vscode.Uri.file(logFile), 'Anonymous Apex · ' + new Date().toLocaleTimeString());
+      }
+      const hist = ctx.globalState.get('anonHistory', []).filter((h) => h.code !== code);
+      hist.unshift({ code, at: Date.now(), org: conn.alias, ok: !!(r.compiled && r.success) });
+      await ctx.globalState.update('anonHistory', hist.slice(0, 25));
+      provider.refresh();
+      return {
+        compiled: !!r.compiled, success: !!r.success, ms: Date.now() - t0,
+        line: r.line, column: r.column, compileProblem: r.compileProblem,
+        exceptionMessage: r.exceptionMessage, exceptionStackTrace: r.exceptionStackTrace,
+        logSize: r.logs ? r.logs.length : 0, logFile,
+      };
+    }
+  }
   reg('orglens.executeAnonymous', async () => {
     if (!needConn()) return;
     const ed = vscode.window.activeTextEditor;
-    let code = ed && !ed.selection.isEmpty ? ed.document.getText(ed.selection) : ed && /\.apex$/.test(ed.document.fileName) ? ed.document.getText() : '';
-    if (!code) {
-      code = await vscode.window.showInputBox({ title: 'Execute anonymous Apex', prompt: 'Apex to run (tip: select code in an editor or open a .apex file)', placeHolder: "System.debug([SELECT Id FROM Account LIMIT 5]);" });
-      if (!code) return;
-    }
-    const tmp = path.join(os.tmpdir(), `sfls-${Date.now()}.apex`);
-    fs.writeFileSync(tmp, code);
+    const code = ed && !ed.selection.isEmpty ? ed.document.getText(ed.selection) : ed && /\.apex$/.test(ed.document.fileName) ? ed.document.getText() : '';
+    if (!code) return openStudio(ctx, studioApi, ':anon'); // no selection → open the run dialog
     try {
-      const r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Executing anonymous Apex on ${conn.alias}…` }, () => runSf(['apex', 'run', '-f', tmp, '-o', conn.target], cwd()).catch((e) => ({ error: e.message })));
-      if (r.error) throw new Error(r.error);
-      const file = path.join(cacheDir(), `anon-${Date.now()}.log`);
-      fs.writeFileSync(file, r.logs || '');
+      const r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Executing anonymous Apex on ${conn.alias}…` }, () => runAnonymous(code));
       if (!r.compiled) vscode.window.showErrorMessage(`Compile error (line ${r.line}, col ${r.column}): ${r.compileProblem}`);
       else if (!r.success) vscode.window.showErrorMessage(`Runtime error: ${r.exceptionMessage}`);
       else vscode.window.setStatusBarMessage('$(check) Anonymous Apex executed', 4000);
-      if (r.logs) analyzeText(r.logs, vscode.Uri.file(file), 'Anonymous Apex · ' + new Date().toLocaleTimeString());
-      provider.refresh();
     } catch (e) {
       vscode.window.showErrorMessage('Execute anonymous failed: ' + e.message);
-    } finally {
-      fs.rmSync(tmp, { force: true });
     }
   });
 
@@ -767,6 +775,20 @@ function activate(ctx) {
       log(`DML ${op} ${object} ${records.length} → ${out.filter((x) => x.success).length} ok`);
       return out;
     },
+    searchLogBodies: ({ term, ids: list }) => {
+      bodyRegex(term); // throws a readable error for a bad /regex/
+      return searchLogBodies(term, list.slice(0, 50));
+    },
+    execAnon: ({ code }) => {
+      if (!String(code || '').trim()) throw new Error('Paste some Apex to run.');
+      return runAnonymous(code);
+    },
+    anonHistory: () => ctx.globalState.get('anonHistory', []),
+    readApexFile: async () => {
+      const pick = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { 'Apex': ['apex', 'cls', 'txt'] }, title: 'Choose an Apex file to run' });
+      if (!pick) return null;
+      return { name: path.basename(pick[0].fsPath), code: fs.readFileSync(pick[0].fsPath, 'utf8').replace(/^﻿/, '') };
+    },
     readTextFile: async () => {
       const pick = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { 'CSV / text': ['csv', 'tsv', 'txt'] }, title: 'Choose a CSV file to import' });
       if (!pick) return null;
@@ -861,7 +883,7 @@ function activate(ctx) {
     },
     confirm: async ({ message, action }) => (await vscode.window.showWarningMessage(message, { modal: true }, action)) === action,
   };
-  const OFFLINE_OK = new Set(['history', 'saved', 'saveQuery', 'deleteSaved', 'saveFile', 'copy', 'pickItems', 'confirm', 'restHistory', 'restSaved', 'restSave', 'restDeleteSaved']);
+  const OFFLINE_OK = new Set(['history', 'saved', 'saveQuery', 'deleteSaved', 'saveFile', 'copy', 'pickItems', 'confirm', 'restHistory', 'restSaved', 'restSave', 'restDeleteSaved', 'anonHistory', 'readApexFile']);
   const studioApi = {
     state: () => ({
       connecting,
@@ -884,9 +906,9 @@ function activate(ctx) {
       if (!conn && !OFFLINE_OK.has(op)) throw new Error('Select an org first.');
       return apiOps[op](args);
     },
-    openLog: (id, mode) => {
+    openLog: (id, mode, opts) => {
       const log = provider.logs.find((l) => l.Id === id);
-      if (log) return openLog(log, mode);
+      if (log) return openLog(log, mode, opts || {});
     },
     deleteIds: (list) => vscode.commands.executeCommand('orglens.deleteLog', null, list.map((id) => ({ log: provider.logs.find((l) => l.Id === id) })).filter((x) => x.log)),
     setServerFilter: async (f) => {

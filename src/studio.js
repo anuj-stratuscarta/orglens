@@ -64,7 +64,7 @@ function openStudio(ctx, a, tab) {
           if (ALLOWED.has(m.id)) await vscode.commands.executeCommand(m.id, ...(m.args || []));
           break;
         case 'open':
-          await api.openLog(m.id, m.mode);
+          await api.openLog(m.id, m.mode, { search: m.search, line: m.line });
           break;
         case 'delete':
           await api.deleteIds(m.ids);

@@ -55,9 +55,28 @@
       D = m.data;
       index();
       render();
+      if (D.meta && D.meta.search) goSearch(D.meta.search.term, D.meta.search.line);
     } else if (m.type === 'plan') onPlan(m);
+    else if (m.type === 'search') goSearch(m.term, m.line);
   });
   post({ cmd: 'ready' });
+
+  /** Open the Log Viewer with a search applied (used by "search inside logs"); /regex/ terms switch regex on. */
+  function goSearch(term, line) {
+    if (!term) return;
+    show('log');
+    requestAnimationFrame(() => {
+      const input = document.getElementById('lq');
+      const reBtn = document.getElementById('lre');
+      if (!input) return;
+      const m = /^\/(.+)\/(\w*)$/.exec(term);
+      const wantRe = !!m;
+      if (reBtn && reBtn.classList.contains('on') !== wantRe) reBtn.click();
+      input.value = m ? m[1] : term;
+      input.dispatchEvent(new Event('input'));
+      if (line != null) setTimeout(() => LOGV.goto(line), 400);
+    });
+  }
 
   function index() {
     rootDur = Math.max(1, D.root.end - D.root.start);
