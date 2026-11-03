@@ -74,7 +74,35 @@
         <li><b>Search inside logs:</b> type a word, record Id, exception text or <code>/regex/</code> in the <i>Search inside logs</i> box (second row) and press ${k('Enter')}. OrgLens reads the bodies of the logs currently listed and narrows the list to the ones that contain it, each with its match count and the first matching lines highlighted. Click a line to open that log in the Log Viewer with the search applied and the line selected (${k('Ctrl')}+click opens the raw log at that line). <i>Clear</i> restores the full list. The Home tile and the sidebar 🔍 take you straight to this box.</li>
       </ul>
       ${shot('live-logs', 'Live Logs with live tail on: two NEW logs, one failed with its NullPointerException message, durations and sizes.')}
+      ${h3('Search inside logs')}
+      <ol class="steps">
+        <li>Narrow the list first if you like (user, time range, failed only) — the search reads only the logs currently listed.</li>
+        <li>Type in the <i>Search inside logs</i> box: plain text is case-insensitive; wrap it in slashes for a regex, e.g. <code>/Account.*Id/</code>.</li>
+        <li>Press ${k('Enter')}. Progress shows as each batch of logs is read (logs are downloaded once and cached, so repeat searches are fast).</li>
+        <li>Matching logs remain, each with a <span class="badge mt">N matches</span> badge and up to three matching lines. Click a line to jump straight to it in the analyzer.</li>
+      </ol>
+      ${shot('logs-search', 'Search inside logs for “SELECT COUNT”: 1 of 4 logs matches (14 lines); the first three matching lines are shown with the term highlighted.')}
+      ${shot('an-search', 'Clicking a matching line opens the analyzer on the Log Viewer with the search applied (1 of 14) and that line selected.')}
       ${go('logs')}`],
+
+    ['anon', 'Execute anonymous Apex', `
+      <p>Run Apex against the connected org and see the result and its debug log straight away.</p>
+      <ol class="steps">
+        <li>Click <b>Execute anonymous</b> on Home (or run <i>OrgLens: Execute Anonymous Apex</i>). A dialog opens.</li>
+        <li>Paste your code, click <b>Load file…</b> to open a <code>.apex</code>, <code>.cls</code> or <code>.txt</code> file, or choose one of your <b>Recent snippets</b> (✓ ran / ✗ failed). Your last draft is kept.</li>
+        <li>Press <b>Run</b> or ${k('Ctrl')}+${k('Enter')}.</li>
+      </ol>
+      <ul>
+        <li><b>Success</b> shows the run time and size of the log.</li>
+        <li><b>Compile error</b> shows the line, column and message, and selects that line in your code so you can fix it.</li>
+        <li><b>Runtime exception</b> shows the message and stack trace.</li>
+        <li>In every case the <b>debug log opens in the analyzer automatically</b> — even when the code fails — captured at the Analysis level, so the Performance tab has method timings.</li>
+        <li>The dialog stays open: edit and <b>Run again</b>. ${k('Esc')} closes it.</li>
+      </ul>
+      ${shot('anon-run', 'The Execute anonymous dialog after a successful run: the debug log (3 KB) opened in the analyzer automatically.')}
+      ${shot('anon-error', 'A compile error: line 2, column 8, with the offending line selected in the code.')}
+      ${note(`Shortcut from code: in an Apex editor, select some code (or open a <code>.apex</code> file) and press ${k('Ctrl')}+${k('Alt')}+${k('E')} to run it without the dialog. The code runs as you, in the org shown in the dialog title, and can change data like any Apex.`)}
+      <div class="g-acts">${run('orglens.executeAnonymous', `${I.play} Open the dialog`)}</div>`],
 
     ['analyzer', 'Log analyzer', `
       <p>Opens when you click a log. The header shows the operation, user, status, duration, size, line count and API version; <b>⧉ Summary</b> copies a Markdown summary for tickets and <b>Open raw log</b> opens the text in an editor with colouring, outline and folding.</p>
@@ -217,7 +245,7 @@
         <li><b>Activity-bar icon:</b> opens this Studio on Home (setting <code>orglens.openHomeOnSidebarClick</code>) and shows the compact <i>Debug Logs</i> list with the same actions on its toolbar.</li>
         <li><b>Status bar:</b> <code>☁ org</code> switches org; the trace item shows time left and opens a quick menu.</li>
         <li><b>Raw logs</b> open with syntax colouring, an Outline (code units → methods) and folding.</li>
-        <li><b>Execute anonymous:</b> the Home tile (or <i>OrgLens: Execute Anonymous Apex</i>) opens a dialog — paste Apex, <i>Load file…</i> (.apex/.cls/.txt) or pick a <i>Recent snippet</i>, and press Run (${k('Ctrl')}+${k('Enter')}). You see success, the compile error with its line selected in the code, or the runtime exception with stack trace, and the debug log opens in the analyzer automatically (captured at Analysis level, even when the code fails). In an Apex editor, select code and press ${k('Ctrl')}+${k('Alt')}+${k('E')} to run it directly.</li>
+        <li><b>Execute anonymous:</b> see <i>Execute anonymous Apex</i> above — or select Apex in an editor and press ${k('Ctrl')}+${k('Alt')}+${k('E')} to run it directly.</li>
         <li><b>Any .log file:</b> right-click in the Explorer → <i>Analyze Apex Log File</i>.</li>
         <li><b>Commands:</b> every feature is in the Command Palette under <i>OrgLens:</i> — e.g. <i>Open OrgLens</i>, <i>Open SOQL Explorer</i>, <i>Open REST Explorer</i>, <i>Manage Trace Flags</i>, <i>Open User Guide</i>.</li>
       </ul>`],
@@ -225,7 +253,7 @@
     ['keys', 'Keyboard shortcuts', `
       <table class="dgrid g-t"><tbody>
         <tr><td>${k('Ctrl')}+${k('Alt')}+${k('E')}</td><td>Execute selected Apex and analyze its log</td></tr>
-        <tr><td>${k('Ctrl')}+${k('Enter')}</td><td>Run SOQL query / send REST request</td></tr>
+        <tr><td>${k('Ctrl')}+${k('Enter')}</td><td>Run SOQL query / send REST request / run Apex in the Execute anonymous dialog</td></tr>
         <tr><td>${k('Tab')}</td><td>Accept first SOQL suggestion</td></tr>
         <tr><td>Double-click, ${k('Enter')} / ${k('Esc')}</td><td>Edit a SOQL result cell, keep / cancel the change</td></tr>
         <tr><td>${k('Ctrl')}+${k('C')}</td><td>Copy selected SOQL result cell</td></tr>
