@@ -1,0 +1,571 @@
+{
+  "name": "orglens",
+  "displayName": "OrgLens for Salesforce — Debug Logs, Performance, SOQL, REST & Org Setup",
+  "description": "Live-tail and analyze Apex debug logs (performance profiler, flame chart, call tree, SOQL/DML insights), manage trace flags for any user, query and edit records inline, test REST APIs and inspect org settings — all inside VS Code.",
+  "version": "1.0.0",
+  "publisher": "anujvaishampayan",
+  "author": {
+    "name": "Anuj Vaishampayan"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anuj-stratuscarta/orglens.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anuj-stratuscarta/orglens/issues"
+  },
+  "homepage": "https://github.com/anuj-stratuscarta/orglens#readme",
+  "qna": "https://github.com/anuj-stratuscarta/orglens/discussions",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#1d4ed8",
+    "theme": "dark"
+  },
+  "preview": false,
+  "pricing": "Free",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Debuggers",
+    "Visualization",
+    "Data Science",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "salesforce",
+    "apex",
+    "debug log",
+    "log analyzer",
+    "apex log",
+    "soql",
+    "sfdx",
+    "sf cli",
+    "trace flag",
+    "performance",
+    "profiler",
+    "flame chart",
+    "rest api",
+    "salesforce inspector",
+    "workbench",
+    "data loader",
+    "revenue cloud"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:sfdx-project.json",
+    "onLanguage:apexlog"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "orglens",
+          "title": "OrgLens",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "orglens": [
+        {
+          "id": "orglens.logs",
+          "name": "Debug Logs",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "orglens.logs",
+        "contents": "$(sync~spin) Connecting to your Salesforce org…\n[$(home) Open OrgLens](command:orglens.openStudio)",
+        "when": "orglens.connecting"
+      },
+      {
+        "view": "orglens.logs",
+        "contents": "Connect to a Salesforce org authenticated with the sf CLI to browse its Apex debug logs.\n[$(cloud) Select Org](command:orglens.selectOrg)\n[$(home) Open OrgLens](command:orglens.openStudio)\nAlready have a log file?\n[$(graph) Analyze Local Log…](command:orglens.analyzeFile)",
+        "when": "!orglens.connected && !orglens.connecting"
+      }
+    ],
+    "commands": [
+      {
+        "command": "orglens.openStudio",
+        "title": "Open OrgLens (Home)",
+        "category": "OrgLens",
+        "icon": "$(home)"
+      },
+      {
+        "command": "orglens.openLiveLogs",
+        "title": "Open Live Logs",
+        "category": "OrgLens",
+        "icon": "$(list-flat)"
+      },
+      {
+        "command": "orglens.openTraceFlags",
+        "title": "Manage Trace Flags & Debug Levels",
+        "category": "OrgLens",
+        "icon": "$(person-add)"
+      },
+      {
+        "command": "orglens.openSoql",
+        "title": "Open SOQL Explorer",
+        "category": "OrgLens",
+        "icon": "$(database)"
+      },
+      {
+        "command": "orglens.openOrgSetup",
+        "title": "Open Org Setup (Settings, Limits, Packages)",
+        "category": "OrgLens",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "orglens.openRest",
+        "title": "Open REST Explorer",
+        "category": "OrgLens",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "orglens.openGuide",
+        "title": "Open User Guide",
+        "category": "OrgLens",
+        "icon": "$(question)"
+      },
+      {
+        "command": "orglens.selectOrg",
+        "title": "Select Org",
+        "category": "OrgLens",
+        "icon": "$(cloud)"
+      },
+      {
+        "command": "orglens.refresh",
+        "title": "Refresh Logs",
+        "category": "OrgLens",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "orglens.startTail",
+        "title": "Start Live Tail",
+        "category": "OrgLens",
+        "icon": "$(radio-tower)"
+      },
+      {
+        "command": "orglens.stopTail",
+        "title": "Stop Live Tail",
+        "category": "OrgLens",
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "orglens.filter",
+        "title": "Filter Logs…",
+        "category": "OrgLens",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "orglens.clearFilter",
+        "title": "Clear Filter",
+        "category": "OrgLens",
+        "icon": "$(filter-filled)"
+      },
+      {
+        "command": "orglens.markAllSeen",
+        "title": "Mark All as Seen",
+        "category": "OrgLens",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "orglens.analyze",
+        "title": "Analyze Log",
+        "category": "OrgLens",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "orglens.openRaw",
+        "title": "Open Raw Log",
+        "category": "OrgLens",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "orglens.saveAs",
+        "title": "Save Log As…",
+        "category": "OrgLens",
+        "icon": "$(save-as)"
+      },
+      {
+        "command": "orglens.copyId",
+        "title": "Copy Log Id",
+        "category": "OrgLens"
+      },
+      {
+        "command": "orglens.deleteLog",
+        "title": "Delete Log",
+        "category": "OrgLens",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "orglens.deleteAll",
+        "title": "Delete Logs…",
+        "category": "OrgLens",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "orglens.startTrace",
+        "title": "Start Tracing (Trace Flag)…",
+        "category": "OrgLens",
+        "icon": "$(record)"
+      },
+      {
+        "command": "orglens.startTraceUser",
+        "title": "Trace Another User…",
+        "category": "OrgLens",
+        "icon": "$(person-add)"
+      },
+      {
+        "command": "orglens.stopTrace",
+        "title": "Stop Tracing",
+        "category": "OrgLens",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "orglens.traceMenu",
+        "title": "OrgLens Menu",
+        "category": "OrgLens"
+      },
+      {
+        "command": "orglens.analyzeFile",
+        "title": "Analyze Apex Log File",
+        "category": "OrgLens",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "orglens.searchLogs",
+        "title": "Search Across Logs…",
+        "category": "OrgLens",
+        "icon": "$(search)"
+      },
+      {
+        "command": "orglens.executeAnonymous",
+        "title": "Execute Anonymous Apex & Analyze",
+        "category": "OrgLens",
+        "icon": "$(play)"
+      },
+      {
+        "command": "orglens.clearCache",
+        "title": "Clear Local Log Cache",
+        "category": "OrgLens"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "orglens.openStudio",
+          "when": "view == orglens.logs",
+          "group": "navigation@0"
+        },
+        {
+          "command": "orglens.openSoql",
+          "when": "view == orglens.logs && orglens.connected",
+          "group": "navigation@6"
+        },
+        {
+          "command": "orglens.openLiveLogs",
+          "when": "view == orglens.logs",
+          "group": "0_studio@1"
+        },
+        {
+          "command": "orglens.openTraceFlags",
+          "when": "view == orglens.logs && orglens.connected",
+          "group": "0_studio@2"
+        },
+        {
+          "command": "orglens.openOrgSetup",
+          "when": "view == orglens.logs && orglens.connected",
+          "group": "0_studio@3"
+        },
+        {
+          "command": "orglens.openRest",
+          "when": "view == orglens.logs && orglens.connected",
+          "group": "0_studio@4"
+        },
+        {
+          "command": "orglens.openGuide",
+          "when": "view == orglens.logs",
+          "group": "0_studio@5"
+        },
+        {
+          "command": "orglens.startTail",
+          "when": "view == orglens.logs && orglens.connected && !orglens.tailing",
+          "group": "navigation@1"
+        },
+        {
+          "command": "orglens.stopTail",
+          "when": "view == orglens.logs && orglens.tailing",
+          "group": "navigation@1"
+        },
+        {
+          "command": "orglens.refresh",
+          "when": "view == orglens.logs && orglens.connected",
+          "group": "navigation@2"
+        },
+        {
+          "command": "orglens.filter",
+          "when": "view == orglens.logs && orglens.connected && !orglens.filtered",
+          "group": "navigation@3"
+        },
+        {
+          "command": "orglens.clearFilter",
+          "when": "view == orglens.logs && orglens.filtered",
+          "group": "navigation@3"
+        },
+        {
+          "command": "orglens.startTrace",
+          "when": "view == orglens.logs && orglens.connected && !orglens.tracing",
+          "group": "navigation@4"
+        },
+        {
+          "command": "orglens.stopTrace",
+          "when": "view == orglens.logs && orglens.tracing",
+          "group": "navigation@4"
+        },
+        {
+          "command": "orglens.searchLogs",
+          "when": "view == orglens.logs && orglens.connected",
+          "group": "navigation@5"
+        },
+        {
+          "command": "orglens.selectOrg",
+          "when": "view == orglens.logs",
+          "group": "1_org@1"
+        },
+        {
+          "command": "orglens.startTraceUser",
+          "when": "view == orglens.logs && orglens.connected",
+          "group": "2_trace@1"
+        },
+        {
+          "command": "orglens.executeAnonymous",
+          "when": "view == orglens.logs && orglens.connected",
+          "group": "2_trace@2"
+        },
+        {
+          "command": "orglens.analyzeFile",
+          "when": "view == orglens.logs",
+          "group": "3_local@1"
+        },
+        {
+          "command": "orglens.markAllSeen",
+          "when": "view == orglens.logs && orglens.connected",
+          "group": "4_manage@1"
+        },
+        {
+          "command": "orglens.deleteAll",
+          "when": "view == orglens.logs && orglens.connected",
+          "group": "4_manage@2"
+        },
+        {
+          "command": "orglens.clearCache",
+          "when": "view == orglens.logs",
+          "group": "4_manage@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "orglens.analyze",
+          "when": "viewItem == apexLog",
+          "group": "inline@1"
+        },
+        {
+          "command": "orglens.openRaw",
+          "when": "viewItem == apexLog",
+          "group": "inline@2"
+        },
+        {
+          "command": "orglens.analyze",
+          "when": "viewItem == apexLog",
+          "group": "1_open@1"
+        },
+        {
+          "command": "orglens.openRaw",
+          "when": "viewItem == apexLog",
+          "group": "1_open@2"
+        },
+        {
+          "command": "orglens.saveAs",
+          "when": "viewItem == apexLog",
+          "group": "2_file@1"
+        },
+        {
+          "command": "orglens.copyId",
+          "when": "viewItem == apexLog",
+          "group": "2_file@2"
+        },
+        {
+          "command": "orglens.deleteLog",
+          "when": "viewItem == apexLog",
+          "group": "3_delete@1"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "orglens.analyzeFile",
+          "when": "editorLangId == apexlog",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "orglens.executeAnonymous",
+          "when": "orglens.connected && (editorLangId == apex || editorLangId == apex-anon) && editorHasSelection",
+          "group": "orglens@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "orglens.analyzeFile",
+          "when": "resourceExtname == .log",
+          "group": "orglens@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "orglens.analyze",
+          "when": "false"
+        },
+        {
+          "command": "orglens.openRaw",
+          "when": "false"
+        },
+        {
+          "command": "orglens.saveAs",
+          "when": "false"
+        },
+        {
+          "command": "orglens.copyId",
+          "when": "false"
+        },
+        {
+          "command": "orglens.deleteLog",
+          "when": "false"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "orglens.executeAnonymous",
+        "key": "ctrl+alt+e",
+        "mac": "cmd+alt+e",
+        "when": "editorTextFocus && orglens.connected && (editorLangId == apex || editorLangId == apex-anon)"
+      }
+    ],
+    "languages": [
+      {
+        "id": "apexlog",
+        "aliases": [
+          "Apex Debug Log",
+          "apexlog"
+        ],
+        "extensions": [
+          ".apexlog"
+        ],
+        "firstLine": "^\\d{2}\\.\\d (APEX_CODE|APEX_PROFILING|CALLOUT|DB|NBA|SYSTEM|VALIDATION|VISUALFORCE|WAVE|WORKFLOW),"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "apexlog",
+        "scopeName": "source.apexlog",
+        "path": "./syntaxes/apexlog.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "OrgLens",
+      "properties": {
+        "orglens.openHomeOnSidebarClick": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the OrgLens Home page whenever the OrgLens icon in the activity bar is clicked."
+        },
+        "orglens.maxLogs": {
+          "type": "number",
+          "default": 150,
+          "minimum": 1,
+          "maximum": 2000,
+          "description": "How many recent logs to list."
+        },
+        "orglens.defaultOpenAction": {
+          "type": "string",
+          "enum": [
+            "analyze",
+            "raw"
+          ],
+          "default": "analyze",
+          "description": "What clicking a log does."
+        },
+        "orglens.tail.intervalSeconds": {
+          "type": "number",
+          "default": 4,
+          "minimum": 2,
+          "description": "Polling interval for live tail."
+        },
+        "orglens.tail.autoStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Start live tail automatically after connecting."
+        },
+        "orglens.tail.onNewLog": {
+          "type": "string",
+          "enum": [
+            "badge",
+            "notify",
+            "analyze",
+            "raw"
+          ],
+          "default": "notify",
+          "enumDescriptions": [
+            "Only show a badge",
+            "Show a notification with actions",
+            "Open the newest log in the analyzer",
+            "Open the newest raw log"
+          ],
+          "description": "What to do when live tail sees a new log."
+        },
+        "orglens.trace.defaultPreset": {
+          "type": "string",
+          "enum": [
+            "Analysis",
+            "Debug",
+            "Finest",
+            "Minimal"
+          ],
+          "default": "Analysis",
+          "description": "Preset offered first when starting a trace."
+        },
+        "orglens.trace.durationMinutes": {
+          "type": "number",
+          "default": 60,
+          "description": "Suggested trace duration."
+        },
+        "orglens.trace.autoExtend": {
+          "type": "boolean",
+          "default": true,
+          "description": "Keep your trace flag alive while live tail is running."
+        },
+        "orglens.analyzer.includeSystemMethods": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include SYSTEM_METHOD_ENTRY/EXIT frames in the call tree and timeline (noisier, larger)."
+        },
+        "orglens.search.maxLogs": {
+          "type": "number",
+          "default": 60,
+          "description": "Max logs downloaded when searching across logs."
+        }
+      }
+    }
+  }
+}

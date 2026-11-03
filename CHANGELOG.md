@@ -1,0 +1,32 @@
+# Changelog
+
+## 1.0.0 — first public release
+
+OrgLens is the new name for the extension previously developed as "SF Log Studio".
+
+**Debug logs**
+- Debug Logs sidebar and a full-page **Live Logs** list with search, filters, sorting and multi-select.
+- **Live tail**: watches the org for new logs, marks them NEW and notifies or opens them automatically.
+- Search inside log bodies (text or regex); bulk delete; save; execute anonymous Apex (`Ctrl+Alt+E`).
+
+**Log analyzer**
+- Overview with automatic insights (SOQL/DML in loops, fatal errors, limits, hotspots).
+- **Performance** profiler: health grade, time breakdown, critical path, recommendations, per-method stats (avg, median, p95, max) with hot/slow/chatty flags.
+- Formatted **Log Viewer**, **Timeline** flame chart, **Call Tree**, Analysis, **Database** (with query plans) and Debug & Errors.
+
+**Trace flags & debug levels**
+- Trace any user, Automated Process, integration and guest users, or Apex classes/triggers; extend, change level or remove in bulk; edit debug levels.
+
+**SOQL explorer**
+- Object/field browser, autocomplete, history and saved queries, data grid with export.
+- Inline editing with batch save and undo, bulk edit, delete, clone, **Show all data** record panel with related lists, new-record form, CSV/Excel **import** (insert/update/upsert/delete), row count and query plan.
+
+**REST explorer**
+- Call any Salesforce REST endpoint with headers and a JSON body; pretty collapsible JSON, raw and headers views; history, saved requests, cURL.
+
+**Org setup**
+- Setup settings (enabled/disabled, searchable), org limits, installed packages, licenses, your access and the setup audit trail.
+
+**Home**
+- Org and tracing status, one-click actions, log insights and an Org pulse (limits, Apex coverage, failed jobs, recent Apex/Flow changes, scheduled jobs).
+- Built-in illustrated user guide.

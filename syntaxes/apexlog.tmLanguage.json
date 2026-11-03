@@ -1,0 +1,40 @@
+{
+  "scopeName": "source.apexlog",
+  "name": "Apex Debug Log",
+  "patterns": [
+    { "match": "^\\d+\\.\\d+ .*$", "name": "comment.line.header.apexlog" },
+    {
+      "match": "^(\\d{2}:\\d{2}:\\d{2}\\.\\d+) (\\(\\d+\\))\\|(EXCEPTION_THROWN|FATAL_ERROR|VALIDATION_FAIL|FLOW_ELEMENT_ERROR|FLOW_ELEMENT_FAULT)(\\|.*)?$",
+      "captures": { "1": { "name": "comment.timestamp.apexlog" }, "2": { "name": "comment.nanos.apexlog" }, "3": { "name": "invalid.illegal.apexlog" }, "4": { "name": "invalid.illegal.message.apexlog" } }
+    },
+    {
+      "match": "^(\\d{2}:\\d{2}:\\d{2}\\.\\d+) (\\(\\d+\\))\\|(USER_DEBUG)\\|(\\[\\d+\\])\\|(\\w+)\\|(.*)$",
+      "captures": { "1": { "name": "comment.timestamp.apexlog" }, "2": { "name": "comment.nanos.apexlog" }, "3": { "name": "keyword.other.debug.apexlog" }, "4": { "name": "constant.numeric.line.apexlog" }, "5": { "name": "storage.modifier.level.apexlog" }, "6": { "name": "string.quoted.debug.apexlog" } }
+    },
+    {
+      "match": "^(\\d{2}:\\d{2}:\\d{2}\\.\\d+) (\\(\\d+\\))\\|(SOQL_EXECUTE_BEGIN|SOSL_EXECUTE_BEGIN)\\|(\\[\\d+\\])\\|([^|]*)\\|(.*)$",
+      "captures": { "1": { "name": "comment.timestamp.apexlog" }, "2": { "name": "comment.nanos.apexlog" }, "3": { "name": "keyword.control.soql.apexlog" }, "4": { "name": "constant.numeric.line.apexlog" }, "5": { "name": "comment.apexlog" }, "6": { "name": "support.type.query.apexlog" } }
+    },
+    {
+      "match": "^(\\d{2}:\\d{2}:\\d{2}\\.\\d+) (\\(\\d+\\))\\|(DML_BEGIN|DML_END|SOQL_EXECUTE_END|SOSL_EXECUTE_END)(\\|.*)?$",
+      "captures": { "1": { "name": "comment.timestamp.apexlog" }, "2": { "name": "comment.nanos.apexlog" }, "3": { "name": "keyword.control.dml.apexlog" }, "4": { "name": "variable.parameter.apexlog" } }
+    },
+    {
+      "match": "^(\\d{2}:\\d{2}:\\d{2}\\.\\d+) (\\(\\d+\\))\\|(METHOD_ENTRY|METHOD_EXIT|CONSTRUCTOR_ENTRY|CONSTRUCTOR_EXIT)\\|(\\[\\d+\\])?(?:\\|[^|]*)?\\|?(.*)$",
+      "captures": { "1": { "name": "comment.timestamp.apexlog" }, "2": { "name": "comment.nanos.apexlog" }, "3": { "name": "keyword.other.method.apexlog" }, "4": { "name": "constant.numeric.line.apexlog" }, "5": { "name": "entity.name.function.apexlog" } }
+    },
+    {
+      "match": "^(\\d{2}:\\d{2}:\\d{2}\\.\\d+) (\\(\\d+\\))\\|(CODE_UNIT_STARTED|CODE_UNIT_FINISHED|EXECUTION_STARTED|EXECUTION_FINISHED|FLOW_START_INTERVIEW_BEGIN|FLOW_START_INTERVIEW_END|FLOW_START_INTERVIEWS_BEGIN|FLOW_START_INTERVIEWS_END)(\\|.*)?$",
+      "captures": { "1": { "name": "comment.timestamp.apexlog" }, "2": { "name": "comment.nanos.apexlog" }, "3": { "name": "entity.name.type.class.apexlog" }, "4": { "name": "entity.name.type.apexlog" } }
+    },
+    {
+      "match": "^(\\d{2}:\\d{2}:\\d{2}\\.\\d+) (\\(\\d+\\))\\|(CALLOUT_REQUEST|CALLOUT_RESPONSE|NAMED_CREDENTIAL_REQUEST|NAMED_CREDENTIAL_RESPONSE)(\\|.*)?$",
+      "captures": { "1": { "name": "comment.timestamp.apexlog" }, "2": { "name": "comment.nanos.apexlog" }, "3": { "name": "keyword.other.callout.apexlog" }, "4": { "name": "string.unquoted.apexlog" } }
+    },
+    {
+      "match": "^(\\d{2}:\\d{2}:\\d{2}\\.\\d+) (\\(\\d+\\))\\|([A-Z_]+)(\\|.*)?$",
+      "captures": { "1": { "name": "comment.timestamp.apexlog" }, "2": { "name": "comment.nanos.apexlog" }, "3": { "name": "storage.type.event.apexlog" }, "4": { "name": "variable.other.apexlog" } }
+    },
+    { "match": "^\\s+(Number of [^:]+|Maximum [^:]+):\\s+(\\d+) out of (\\d+)(.*)$", "captures": { "1": { "name": "variable.other.limit.apexlog" }, "2": { "name": "constant.numeric.apexlog" }, "3": { "name": "constant.numeric.apexlog" }, "4": { "name": "invalid.illegal.apexlog" } } }
+  ]
+}

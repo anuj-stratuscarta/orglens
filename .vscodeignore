@@ -1,0 +1,5 @@
+node_modules
+*.vsix
+media/icon-src.svg
+.vscode/**
+**/*.map
