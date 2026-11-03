@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- User guide: new **Execute anonymous Apex** section and a step-by-step **Search inside logs** walkthrough, with screenshots of both features.
+
 ## 1.1.0
 
 - **Search inside logs** now works in the Live Logs list: type text or a /regex/ and the list narrows to the logs that contain it, with match counts and the matching lines. Click a line to open the log in the Log Viewer with the search applied and that line selected.
