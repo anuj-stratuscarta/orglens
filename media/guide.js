@@ -71,7 +71,7 @@
         <li>Row icons: analyze, raw log, delete. With several selected: <i>Analyze</i> or <i>Delete</i> them together.</li>
         <li><b>Filters:</b> text search (operation, user, request, Id), status, user, operation, time range, minimum duration. <b>Only mine</b> asks the org for your logs only; the other filters work on the list already loaded (up to <code>orglens.maxLogs</code>, default 150).</li>
         <li>Failed transactions show a red dot and the error message; slow ones (over 5 s) get an amber duration bar. New arrivals are tagged <span class="newtag">NEW</span>.</li>
-        <li><b>Search inside logs</b> (Home tile or sidebar 🔍) searches the <i>contents</i> of the listed logs — text or <code>/regex/</code> — and jumps to the matching line.</li>
+        <li><b>Search inside logs:</b> type a word, record Id, exception text or <code>/regex/</code> in the <i>Search inside logs</i> box (second row) and press ${k('Enter')}. OrgLens reads the bodies of the logs currently listed and narrows the list to the ones that contain it, each with its match count and the first matching lines highlighted. Click a line to open that log in the Log Viewer with the search applied and the line selected (${k('Ctrl')}+click opens the raw log at that line). <i>Clear</i> restores the full list. The Home tile and the sidebar 🔍 take you straight to this box.</li>
       </ul>
       ${shot('live-logs', 'Live Logs with live tail on: two NEW logs, one failed with its NullPointerException message, durations and sizes.')}
       ${go('logs')}`],
