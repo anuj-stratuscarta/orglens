@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.2
+
+- New **demo video** on the extension page: a 4½-minute captioned walkthrough of every feature.
+- Packaging: a local Salesforce CLI cache folder (`.sf/`) is no longer included in the extension.
+
+## 1.2.1
+
+- The OrgLens activity-bar icon now works as a button: it opens OrgLens Home and closes the sidebar, so no panel stays open.
+
+## 1.2.0
+
+- **No more Debug Logs panel.** Logs are no longer listed in the sidebar. Browse, filter, tail and open logs on the **Live Logs** page. The sidebar-only settings `openHomeOnSidebarClick` and `defaultOpenAction` are removed.
+
 ## 1.1.2
 
 - **Select Org opens instantly.** The org list is read straight from the Salesforce CLI's local files instead of running `sf org list` (which contacts every org and could take a minute). The list now marks the connected org (✓) and the project default (★), and is searchable by alias, username or URL.

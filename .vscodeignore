@@ -6,3 +6,4 @@ media/icon-src.svg
 .gitignore
 .git/**
 *.mp4
+.sf/**

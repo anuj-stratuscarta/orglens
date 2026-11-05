@@ -240,9 +240,8 @@
       ${h3('Check whether a feature setting is enabled')}
       <p>Org Setup → Settings → type a keyword (e.g. <i>history</i>, <i>pricing</i>, <i>orders</i>) in <i>Search every setting</i>. Tick <i>Only enabled</i> to see what is switched on.</p>`],
 
-    ['sidebar', 'Sidebar, status bar & editor', `
+    ['sidebar', 'Status bar & editor', `
       <ul>
-        <li><b>Activity-bar icon:</b> opens this Studio on Home (setting <code>orglens.openHomeOnSidebarClick</code>) and shows the compact <i>Debug Logs</i> list with the same actions on its toolbar.</li>
         <li><b>Status bar:</b> <code>☁ org</code> switches org; the trace item shows time left and opens a quick menu.</li>
         <li><b>Raw logs</b> open with syntax colouring, an Outline (code units → methods) and folding.</li>
         <li><b>Execute anonymous:</b> see <i>Execute anonymous Apex</i> above — or select Apex in an editor and press ${k('Ctrl')}+${k('Alt')}+${k('E')} to run it directly.</li>
@@ -295,8 +294,6 @@
         <tr><td><code>trace.defaultPreset</code> / <code>trace.durationMinutes</code></td><td>Defaults when starting a trace.</td></tr>
         <tr><td><code>trace.autoExtend</code></td><td>Keep your trace alive while live tail runs.</td></tr>
         <tr><td><code>maxLogs</code></td><td>How many recent logs to list (default 150).</td></tr>
-        <tr><td><code>defaultOpenAction</code></td><td>Clicking a log in the sidebar: analyze or raw.</td></tr>
-        <tr><td><code>openHomeOnSidebarClick</code></td><td>Open this Studio when the activity-bar icon is clicked.</td></tr>
         <tr><td><code>analyzer.includeSystemMethods</code></td><td>Include system method frames in the call tree (noisier).</td></tr>
         <tr><td><code>search.maxLogs</code></td><td>Maximum logs downloaded when searching inside logs.</td></tr>
       </tbody></table>`],

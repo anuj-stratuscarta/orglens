@@ -2,7 +2,7 @@
   "name": "orglens",
   "displayName": "OrgLens for Salesforce — Debug Logs, Performance, SOQL, REST & Org Setup",
   "description": "Live-tail and analyze Apex debug logs (performance profiler, flame chart, call tree, SOQL/DML insights), manage trace flags for any user, query and edit records inline, test REST APIs and inspect org settings — all inside VS Code.",
-  "version": "1.1.2",
+  "version": "1.2.2",
   "publisher": "anujvaishampayan",
   "author": {
     "name": "Anuj Vaishampayan"
@@ -75,22 +75,16 @@
     "views": {
       "orglens": [
         {
-          "id": "orglens.logs",
-          "name": "Debug Logs",
+          "id": "orglens.home",
+          "name": "OrgLens",
           "icon": "media/activity.svg"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "orglens.logs",
-        "contents": "$(sync~spin) Connecting to your Salesforce org…\n[$(home) Open OrgLens](command:orglens.openStudio)",
-        "when": "orglens.connecting"
-      },
-      {
-        "view": "orglens.logs",
-        "contents": "Connect to a Salesforce org authenticated with the sf CLI to browse its Apex debug logs.\n[$(cloud) Select Org](command:orglens.selectOrg)\n[$(home) Open OrgLens](command:orglens.openStudio)\nAlready have a log file?\n[$(graph) Analyze Local Log…](command:orglens.analyzeFile)",
-        "when": "!orglens.connected && !orglens.connecting"
+        "view": "orglens.home",
+        "contents": "[$(home) Open OrgLens](command:orglens.openStudio)"
       }
     ],
     "commands": [
@@ -261,155 +255,6 @@
       }
     ],
     "menus": {
-      "view/title": [
-        {
-          "command": "orglens.openStudio",
-          "when": "view == orglens.logs",
-          "group": "navigation@0"
-        },
-        {
-          "command": "orglens.openSoql",
-          "when": "view == orglens.logs && orglens.connected",
-          "group": "navigation@6"
-        },
-        {
-          "command": "orglens.openLiveLogs",
-          "when": "view == orglens.logs",
-          "group": "0_studio@1"
-        },
-        {
-          "command": "orglens.openTraceFlags",
-          "when": "view == orglens.logs && orglens.connected",
-          "group": "0_studio@2"
-        },
-        {
-          "command": "orglens.openOrgSetup",
-          "when": "view == orglens.logs && orglens.connected",
-          "group": "0_studio@3"
-        },
-        {
-          "command": "orglens.openRest",
-          "when": "view == orglens.logs && orglens.connected",
-          "group": "0_studio@4"
-        },
-        {
-          "command": "orglens.openGuide",
-          "when": "view == orglens.logs",
-          "group": "0_studio@5"
-        },
-        {
-          "command": "orglens.startTail",
-          "when": "view == orglens.logs && orglens.connected && !orglens.tailing",
-          "group": "navigation@1"
-        },
-        {
-          "command": "orglens.stopTail",
-          "when": "view == orglens.logs && orglens.tailing",
-          "group": "navigation@1"
-        },
-        {
-          "command": "orglens.refresh",
-          "when": "view == orglens.logs && orglens.connected",
-          "group": "navigation@2"
-        },
-        {
-          "command": "orglens.filter",
-          "when": "view == orglens.logs && orglens.connected && !orglens.filtered",
-          "group": "navigation@3"
-        },
-        {
-          "command": "orglens.clearFilter",
-          "when": "view == orglens.logs && orglens.filtered",
-          "group": "navigation@3"
-        },
-        {
-          "command": "orglens.startTrace",
-          "when": "view == orglens.logs && orglens.connected && !orglens.tracing",
-          "group": "navigation@4"
-        },
-        {
-          "command": "orglens.stopTrace",
-          "when": "view == orglens.logs && orglens.tracing",
-          "group": "navigation@4"
-        },
-        {
-          "command": "orglens.searchLogs",
-          "when": "view == orglens.logs && orglens.connected",
-          "group": "navigation@5"
-        },
-        {
-          "command": "orglens.selectOrg",
-          "when": "view == orglens.logs",
-          "group": "1_org@1"
-        },
-        {
-          "command": "orglens.startTraceUser",
-          "when": "view == orglens.logs && orglens.connected",
-          "group": "2_trace@1"
-        },
-        {
-          "command": "orglens.executeAnonymous",
-          "when": "view == orglens.logs && orglens.connected",
-          "group": "2_trace@2"
-        },
-        {
-          "command": "orglens.analyzeFile",
-          "when": "view == orglens.logs",
-          "group": "3_local@1"
-        },
-        {
-          "command": "orglens.markAllSeen",
-          "when": "view == orglens.logs && orglens.connected",
-          "group": "4_manage@1"
-        },
-        {
-          "command": "orglens.deleteAll",
-          "when": "view == orglens.logs && orglens.connected",
-          "group": "4_manage@2"
-        },
-        {
-          "command": "orglens.clearCache",
-          "when": "view == orglens.logs",
-          "group": "4_manage@3"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "orglens.analyze",
-          "when": "viewItem == apexLog",
-          "group": "inline@1"
-        },
-        {
-          "command": "orglens.openRaw",
-          "when": "viewItem == apexLog",
-          "group": "inline@2"
-        },
-        {
-          "command": "orglens.analyze",
-          "when": "viewItem == apexLog",
-          "group": "1_open@1"
-        },
-        {
-          "command": "orglens.openRaw",
-          "when": "viewItem == apexLog",
-          "group": "1_open@2"
-        },
-        {
-          "command": "orglens.saveAs",
-          "when": "viewItem == apexLog",
-          "group": "2_file@1"
-        },
-        {
-          "command": "orglens.copyId",
-          "when": "viewItem == apexLog",
-          "group": "2_file@2"
-        },
-        {
-          "command": "orglens.deleteLog",
-          "when": "viewItem == apexLog",
-          "group": "3_delete@1"
-        }
-      ],
       "editor/title": [
         {
           "command": "orglens.analyzeFile",
@@ -485,26 +330,12 @@
     "configuration": {
       "title": "OrgLens",
       "properties": {
-        "orglens.openHomeOnSidebarClick": {
-          "type": "boolean",
-          "default": true,
-          "description": "Open the OrgLens Home page whenever the OrgLens icon in the activity bar is clicked."
-        },
         "orglens.maxLogs": {
           "type": "number",
           "default": 150,
           "minimum": 1,
           "maximum": 2000,
           "description": "How many recent logs to list."
-        },
-        "orglens.defaultOpenAction": {
-          "type": "string",
-          "enum": [
-            "analyze",
-            "raw"
-          ],
-          "default": "analyze",
-          "description": "What clicking a log does."
         },
         "orglens.tail.intervalSeconds": {
           "type": "number",

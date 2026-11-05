@@ -31,8 +31,6 @@ const setCtx = (k, v) => vscode.commands.executeCommand('setContext', 'orglens.'
 
 function activate(ctx) {
   const provider = new LogTreeProvider({ conn: () => conn, filter });
-  const view = vscode.window.createTreeView('orglens.logs', { treeDataProvider: provider, canSelectMany: true, showCollapseAll: false });
-  ctx.subscriptions.push(view);
   output = vscode.window.createOutputChannel('OrgLens');
   ctx.subscriptions.push(output);
   lang.register(ctx);
@@ -86,8 +84,6 @@ function activate(ctx) {
       conn = c;
       await ctx.workspaceState.update('org', target);
       setCtx('connected', true);
-      view.title = 'Debug Logs';
-      view.description = conn.alias;
       connecting = null;
       setCtx('connecting', false);
       updateStatus();
@@ -164,8 +160,7 @@ function activate(ctx) {
       if (fresh.length) onNewLogs(fresh);
     }, ms);
     setCtx('tailing', true);
-    view.message = '● Live — watching for new logs';
-    updateStatus();
+        updateStatus();
     if (!traceExp || traceExp < Date.now()) {
       vscode.window.showWarningMessage('Live tail is on, but you have no active trace flag, so no new logs will appear.', 'Start tracing').then((a) => a && vscode.commands.executeCommand('orglens.startTrace'));
     }
@@ -174,11 +169,9 @@ function activate(ctx) {
     clearInterval(tailTimer);
     tailTimer = null;
     setCtx('tailing', false);
-    view.message = undefined;
     updateStatus();
   }
   function onNewLogs(fresh) {
-    view.badge = { value: provider.newIds.size, tooltip: `${provider.newIds.size} new log(s)` };
     const mode = cfg().get('tail.onNewLog');
     const newest = fresh[0];
     if (mode === 'analyze') openLog(newest, 'analyze');
@@ -195,7 +188,7 @@ function activate(ctx) {
     const file = path.join(cacheDir(), `${log.Id}.log`);
     if (fs.existsSync(file)) return file;
     const body = await vscode.window.withProgress(
-      { location: { viewId: 'orglens.logs' }, title: 'Downloading log…' },
+      { location: vscode.ProgressLocation.Window, title: 'Downloading log…' },
       () => conn.getLogBody(log.Id)
     );
     fs.writeFileSync(file, body);
@@ -206,7 +199,6 @@ function activate(ctx) {
   async function openLog(log, mode, opts = {}) {
     try {
       provider.markSeen(log.Id);
-      view.badge = provider.newIds.size ? { value: provider.newIds.size, tooltip: 'new logs' } : undefined;
       const file = await getLogFile(log);
       const uri = vscode.Uri.file(file);
       if (mode === 'raw') {
@@ -244,7 +236,7 @@ function activate(ctx) {
   }
 
   const itemsOf = (item, selected) => {
-    const list = selected && selected.length ? selected : item ? [item] : view.selection;
+    const list = selected && selected.length ? selected : item ? [item] : [];
     return list.filter((x) => x && x.log).map((x) => x.log);
   };
   const needConn = () => {
@@ -303,7 +295,6 @@ function activate(ctx) {
   reg('orglens.stopTail', () => stopTail());
   reg('orglens.markAllSeen', () => {
     provider.newIds.clear();
-    view.badge = undefined;
     provider._emitter.fire();
   });
 
@@ -357,7 +348,6 @@ function activate(ctx) {
     if (filter.userName) parts.push(filter.userName);
     if (filter.minDuration) parts.push(`≥${filter.minDuration}ms`);
     setCtx('filtered', parts.length > 0);
-    view.description = (conn ? conn.alias : '') + (parts.length ? ' · ⧩ ' + parts.join(', ') : '');
   }
   reg('orglens.clearFilter', async () => {
     Object.assign(filter, { mineOnly: false, errorsOnly: false, text: '', operation: null, userName: null, minDuration: 0 });
@@ -932,12 +922,14 @@ function activate(ctx) {
   reg('orglens.openGuide', () => openStudio(ctx, studioApi, 'guide'));
   reg('orglens.openRest', () => openStudio(ctx, studioApi, 'rest'));
 
-  // Clicking the activity-bar icon lands on the OrgLens Home page.
-  const openHomeFromSidebar = () => {
-    if (cfg().get('openHomeOnSidebarClick')) openStudio(ctx, studioApi, 'home');
+  // The activity-bar icon is a launcher: clicking it opens Home and closes the sidebar, so no panel stays open.
+  const launcher = vscode.window.createTreeView('orglens.home', { treeDataProvider: { getTreeItem: (x) => x, getChildren: () => [] } });
+  const launch = () => {
+    openStudio(ctx, studioApi, 'home');
+    vscode.commands.executeCommand('workbench.action.closeSidebar');
   };
-  ctx.subscriptions.push(view.onDidChangeVisibility((e) => e.visible && openHomeFromSidebar()));
-  if (view.visible) openHomeFromSidebar();
+  ctx.subscriptions.push(launcher, launcher.onDidChangeVisibility((e) => e.visible && launch()));
+  if (launcher.visible) launch();
 
   reg('orglens.clearCache', () => {
     fs.rmSync(path.join(ctx.globalStorageUri.fsPath, 'logs'), { recursive: true, force: true });
@@ -947,7 +939,7 @@ function activate(ctx) {
   ctx.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('orglens.tail.intervalSeconds') && tailTimer) { stopTail(); startTail(); }
-      if (e.affectsConfiguration('orglens.defaultOpenAction') || e.affectsConfiguration('orglens.maxLogs')) provider.refresh();
+      if (e.affectsConfiguration('orglens.maxLogs')) provider.refresh();
     }),
     { dispose: () => { stopTail(); clearInterval(traceTick); } }
   );
