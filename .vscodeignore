@@ -5,3 +5,4 @@ media/icon-src.svg
 **/*.map
 .gitignore
 .git/**
+*.mp4

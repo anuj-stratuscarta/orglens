@@ -4,6 +4,12 @@
 
 OrgLens gives Salesforce developers and admins one place to watch and analyze Apex debug logs, find slow code, trace any user or background process, query and fix data, test REST APIs and check how an org is configured — without leaving the editor. It signs in with the orgs you have already authorized in the Salesforce CLI, so there is nothing new to log in to.
 
+### ▶ Watch the demo
+
+[![Watch the OrgLens demo — 4½ minutes, every feature step by step](media/demo-poster.jpg)](https://github.com/anuj-stratuscarta/orglens/blob/main/OrgLens-demo.mp4)
+
+A 4½-minute silent walkthrough with on-screen captions: tracing, live logs, the log analyzer and profiler, execute anonymous, SOQL editing, the REST explorer and org setup. [Watch it on GitHub](https://github.com/anuj-stratuscarta/orglens/blob/main/OrgLens-demo.mp4).
+
 ![OrgLens Home](media/guide/home.png)
 
 ## Features
