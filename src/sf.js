@@ -80,10 +80,20 @@ class Connection {
   /** Newer sf CLIs redact the token in `org display`; ask for it explicitly. */
   async freshToken(fromDisplay) {
     if (fromDisplay && !/REDACTED/i.test(fromDisplay)) return fromDisplay;
-    const t = await runSf(['org', 'auth', 'show-access-token', '-o', this.target, '-p'], this.cwd);
-    if (!t || !t.accessToken) throw new Error('sf CLI did not return an access token');
-    if (this.onToken) this.onToken(t.accessToken);
-    return t.accessToken;
+    let token;
+    try {
+      const t = await runSf(['org', 'auth', 'show-access-token', '-o', this.target, '-p'], this.cwd);
+      token = t && t.accessToken;
+    } catch (e) {
+      // Older sf CLIs lack `org auth show-access-token` but don't redact `org display`.
+      if (!/not a sf command|command .*not found/i.test(e.message)) throw e;
+      const d = await runSf(['org', 'display', '-o', this.target], this.cwd);
+      token = d && d.accessToken;
+      if (token && /REDACTED/i.test(token)) token = null;
+    }
+    if (!token) throw new Error('sf CLI did not return an access token. Try updating it: npm install -g @salesforce/cli@latest');
+    if (this.onToken) this.onToken(token);
+    return token;
   }
 
   url(path) {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.3
+
+- **Fix for older Salesforce CLIs.** Connecting to an org failed with "org auth show-access-token is not a sf command" on CLI versions that predate that command. OrgLens now falls back to `sf org display` to get the access token. If no token can be obtained, the error suggests updating the CLI.
+
 ## 1.2.2
 
 - New **demo video** on the extension page: a 4½-minute captioned walkthrough of every feature.
